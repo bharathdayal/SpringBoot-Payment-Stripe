@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stripe Checkout Demo</title>
+</head>
+<body>
+<h2>Stripe Checkout Demo</h2>
+<form id="payment-form">
+    <label>Amount (in USD cents):</label>
+    <input type="number" id="amount" value="5000" />
+    <label>Description:</label>
+    <input type="text" id="description" value="Test Payment" />
+    <button type="submit">Pay with Stripe</button>
+</form>
+
+<script>
+    document.getElementById("payment-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const orderRequest = {
+            amount: parseInt(document.getElementById("amount").value),
+            currency: "usd",
+            description: document.getElementById("description").value
+        };
+
+        try {
+            // Call your backend to create a Checkout Session
+            const res = await fetch("/api/payment/stripe/checkout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(orderRequest)
+            });
+
+            const data = await res.json();
+
+            // Redirect user to Stripe Checkout
+            window.location.href = data.checkoutUrl;
+
+        } catch (err) {
+            console.error("Error creating checkout session", err);
+            alert("Failed to initiate payment");
+        }
+    });
+</script>
+</body>
+</html>
