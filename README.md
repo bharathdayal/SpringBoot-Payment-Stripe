@@ -19,15 +19,13 @@ This project shows how to:
 
 ## 🏗️ Architecture Diagram
 
-```
-Client → Spring Boot REST API → Stripe SDK → Stripe Gateway
-│ │
-│ ├── PaymentIntent / CheckoutSession
-│ └── Returns clientSecret / checkoutUrl
-│
-├── Redis (idempotent request keys)
+Client → Spring Boot REST API → Stripe SDK → Stripe Gateway  
+│ │  
+│ ├── PaymentIntent / CheckoutSession  
+│ └── Returns clientSecret / checkoutUrl  
+│  
+├── Redis (idempotent request keys)  
 └── MySQL/Postgres (Payment & Transaction persistence)
-```
 
 ---
 
@@ -55,7 +53,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'com.stripe:stripe-java:24.10.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
-    runtimeOnly 'com.h2database:h2' // or MySQL/Postgres driver
+    runtimeOnly 'com.mysql:mysql-connector-j' // or MySQL/Postgres driver
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 ```
@@ -93,6 +91,23 @@ Idempotency-Key: f7b1b2c6-93d8-4b45-9af8-8f6c4c93e912
 
 ---
 
+## 🔁 Idempotency & Retry Behavior
+
+If you retry the same request with the same Idempotency-Key, the API will respond:
+
+```json
+{
+    "success": true,
+    "paymentId": "3",
+    "clientSecret": null,
+    "message": "Payment already exists for idempotency key"
+}
+```
+
+This ensures duplicate payments are not processed.
+
+---
+
 ## 💡 Redis Idempotency Flow
 
 - Client sends POST request with Idempotency-Key.
@@ -109,6 +124,24 @@ Idempotency-Key: f7b1b2c6-93d8-4b45-9af8-8f6c4c93e912
 3. Frontend → Redirects user to Stripe-hosted checkout page
 4. User enters card details → Stripe handles secure payment
 5. Stripe sends webhook (optional) to your backend confirming payment success/failure
+
+---
+
+## 🗄️ Example Data Stored
+
+### Payment Table
+
+| Payment ID | Amount | Date                       | Currency | Description                | Status                   | UUID                                 | Checkout URL                                      |
+|------------|--------|----------------------------|----------|----------------------------|--------------------------|--------------------------------------|---------------------------------------------------|
+| 1          | 60000  | 2025-10-14                 | usd      | Order #123 - Iphone 16     | requires_payment_method  | 3a67c3f4-39a2-4c02-b7b9-1D-intent    |                                                   |
+| 2          | 60000  | 2025-10-14                 | usd      | Order #123 - Iphone 16     | CHECKOUT_CREATED         | 3a67c3f4-39a2-4c02-b7b9-1D-checkout  | https://checkout.stripe.com/c/pay/cs_test_a1xxxxxx |
+
+### Transaction Table
+
+| Gateway         | Transaction ID         | Status                     | UUID                                PaymentID  | 
+|-----------------|-----------------------|---------                    |-----------------------------        |
+| STRIPE          | cs_test_a1xxxxx       | requires_payment_method     | cbabbdab-2c5b-4ec3-ab3e-33         |1
+| STRIPE_CHECKOUT | cs_test_a1xxxxx       | PENDING                     | 68a2d6e5-4050-4ac1-90f3-65          |2
 
 ---
 
