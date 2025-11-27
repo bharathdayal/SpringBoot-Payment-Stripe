@@ -1,356 +1,230 @@
-💳 Spring Boot + Stripe Payments + Stripe Checkout + Redis Idempotency + Webhooks
+# 💳 Spring Boot + Stripe Payments + Checkout + Redis Idempotency + Webhooks
 
-A complete Spring Boot demo that implements:
+This project demonstrates a complete Stripe payment flow using Spring Boot.  
+It supports both PaymentIntent (custom card entry) and Checkout (Stripe-hosted page).  
+Redis ensures idempotency, preventing duplicate charges.  
+Webhooks automatically update payment and transaction status.  
+All features are protected using Basic Auth.
 
-Stripe PaymentIntent API (custom card input using Stripe.js)
+---
 
-Stripe Checkout Session API (hosted checkout page)
+# 📌 API Endpoints
 
-Redis-based idempotency to prevent duplicate charging
+## 🔹 PaymentIntent (Custom Card Form)
+**POST /api/payment/stripe/create**
 
-Payment & Transaction persistence using JPA/Hibernate
+Creates Payment + PaymentIntent and returns `clientSecret`.
 
-Webhook-based automatic payment confirmation
+## 🔹 Checkout Session (Hosted Stripe Page)
+**POST /api/payment/stripe/checkout**
 
-Spring Security (Basic Auth) for protected endpoints
+Creates a Checkout Session and returns `checkoutUrl` for redirect.
 
-This project is ideal for learning or integrating Stripe payments into microservices or monolithic Spring Boot applications.
+## 🔹 Stripe Webhook
+**POST /api/payment/webhook/stripe**
 
-📘 Table of Contents
+Stripe sends events → backend updates Payment + Transaction status.
 
-Overview
+---
 
-Architecture
+# 🏗 Architecture (Simplified)
+- Client calls payment APIs  
+- Spring Boot processes requests  
+- Stripe SDK creates PaymentIntents or Checkout Sessions  
+- Redis stores idempotency keys to prevent duplicates  
+- Database stores Payment + Transaction records  
+- Stripe Webhooks notify the backend of final payment status  
 
-Tech Stack
+Client App
+│
+├── Calls /payment/create → PaymentIntent (clientSecret returned)
+│
+├── Calls /payment/checkout → Stripe Checkout Session (URL returned)
+│
+Spring Boot Backend
+│
+├── Stripe SDK → Creates PaymentIntent / Checkout Session
+│
+├── Redis (idempotency keys)
+│ │
+│ └── Prevents duplicate payment creation
+│
+├── Database
+│ └── Stores Payment + Transaction records
+│
+└── Receives Stripe Webhooks
+│
+└── Updates payment status (SUCCEEDED / FAILED)
 
-Dependencies
+---
 
-Configuration
+# 💰 Payment Flows
 
-Database Entities
+## 1️⃣ PaymentIntent Flow (Custom Card Form)
+- Client sends POST **/api/payment/stripe/create**  
+- Backend creates Payment + PaymentIntent  
+- Backend returns `clientSecret`  
+- Frontend uses Stripe.js to confirm payment  
+- Stripe processes card  
+- Stripe sends webhook `payment_intent.succeeded`  
+- Backend updates Payment + Transaction → **SUCCEEDED**  
 
-Redis Idempotency
+## 2️⃣ Checkout Session Flow (Stripe Hosted Page)
+- Client sends POST **/api/payment/stripe/checkout**  
+- Backend creates Payment + Checkout Session  
+- Backend returns `checkoutUrl`  
+- Browser redirects to Stripe Checkout  
+- User enters card details and completes payment  
+- Stripe sends webhook `checkout.session.completed`  
+- Backend updates Payment + Transaction → **PAYMENT_SUCCEEDED**  
 
-Stripe Services
+---
 
-Security (Basic Auth)
+# 🔁 Redis Idempotency Flow
+- Client includes header: `Idempotency-Key: <uuid>`  
+- Backend checks Redis for existing response  
+- If found → returns cached response  
+- If not → creates PaymentIntent or Checkout Session  
+- Keys stored as:  
+  - `<uuid>-intent`  (PaymentIntent)  
+  - `<uuid>-checkout` (Checkout Session)  
+- Prevents duplicate charges across retries or double-clicks  
 
-Controllers
+---
 
-Webhook — Automatic Payment Confirmation
+# 🌐 Webhook Flow (Automatic Payment Confirmation)
+- Stripe sends events to **/api/payment/webhook/stripe**:  
+  - `payment_intent.succeeded`  
+  - `payment_intent.payment_failed`  
+  - `checkout.session.completed`  
+- Backend retrieves Stripe transaction ID  
+- Updates Transaction → SUCCEEDED / FAILED  
+- Updates Payment → PAYMENT_SUCCEEDED / PAYMENT_FAILED  
+- Ensures final state correctness even if frontend fails to redirect  
 
-Running the Application
+---
 
-Payment Flows
+# 🔐 Security Flow (Basic Auth)
+- All payment endpoints require HTTP Basic Auth  
+- Only authenticated users can call:  
+  - **/api/payment/stripe/create**  
+  - **/api/payment/stripe/checkout**  
+- Protects payment APIs from unauthorized requests  
 
-Future Enhancements
+---
 
-Author
+# 🧪 Running the Application
+- Start Redis:  
+  `docker run -d -p 6379:6379 redis`  
+- Start Spring Boot:  
+  `./gradlew bootRun`  
+- Use Basic Auth (admin/admin) and always supply `Idempotency-Key`  
 
-🧠 Overview
+---
 
-This Spring Boot application demonstrates:
+## ⚙️ Tech Stack
 
-✔ Creating PaymentIntents for card payments
-✔ Redirecting users to Stripe Checkout
-✔ Enforcing idempotent payment creation using Redis
-✔ Storing payments and transactions in a relational DB
-✔ Automatic payment reconciliation using Stripe Webhooks
-✔ Securing API endpoints with Basic Auth
+| Layer             | Technology                |
+|-------------------|--------------------------|
+| Backend Framework | Spring Boot 3.x          |
+| Build Tool        | Gradle                   |
+| Database          | H2 / MySQL (JPA + Hibernate) |
+| Caching           | Redis                    |
+| Payment Gateway   | Stripe SDK (Java)        |
+| Security          | Spring Security (Basic Auth) |
+| Logging           | SLF4J / Logback          |
 
-🏗 Architecture
-Client → Spring Boot API → Stripe SDK → Stripe Gateway
-           │                    │
-           │                    ├── PaymentIntent / CheckoutSession
-           │                    └── clientSecret / checkoutUrl
-           │
-           ├── Redis (idempotency)
-           └── Database (Payment + Transaction)
-                       ↑
-                       │
-              Stripe Webhook → Automatic Confirmation
+---
 
-⚙ Tech Stack
-Category	Technology
-Backend	Spring Boot 3.x
-Language	Java 17+
-Payment Gateway	Stripe Java SDK
-Cache	Redis
-Database	H2 / MySQL / PostgreSQL
-ORM	Hibernate / Spring Data JPA
-Security	Spring Security (Basic Auth)
-Build	Gradle
-📦 Dependencies (Gradle)
+## 📦 Dependencies (Gradle)
+
+```groovy
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'com.stripe:stripe-java:24.10.0'
-    runtimeOnly 'com.h2database:h2'    // or MySQL/PostgreSQL driver
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    runtimeOnly 'com.mysql:mysql-connector-j' // or MySQL/Postgres driver
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
+```
 
-⚙ Configuration
+---
 
-Create application.properties:
+## 📤 Example Request
 
-server.port=8080
+**POST** `/api/payment/stripe/create`
 
-# Stripe
-stripe.api.key=sk_test_xxx
-stripe.webhook.secret=whsec_xxx
+**Headers**
+```
+Authorization: Basic YWRtaW46YWRtaW4=
+Idempotency-Key: f7b1b2c6-93d8-4b45-9af8-8f6c4c93e912
+```
 
-# Database
-spring.datasource.url=jdbc:h2:mem:paymentdb
-spring.jpa.hibernate.ddl-auto=update
-
-# Redis
-spring.redis.host=localhost
-spring.redis.port=6379
-
-🧩 Database Entities
-Payment.java
-@Entity
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class Payment {
-
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    private String uuid;        // idempotency key or session key
-    private Long amount;
-    private String currency;
-    private String description;
-    private String status;
-
-    @Column(length = 2000)
-    private String clientSecret;
-
-    @Column(length = 2000)
-    private String checkoutUrl;
+**Body**
+```json
+{
+  "amount": 5000,
+  "currency": "usd",
+  "description": "Spring Boot Stripe Demo Payment"
 }
+```
 
-Transaction.java
-@Entity
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class Transaction {
-
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    private String uuid;
-    private String gatewayTransactionId;
-    private String gateway;
-    private String status;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    private Payment payment;
+**Response**
+```json
+{
+  "success": true,
+  "paymentId": "1",
+  "clientSecret": "pi_3OvD...secret_abc",
+  "message": "PaymentIntent created"
 }
+```
 
-🔁 Redis Idempotency
-IdempotencyService
-@Service
-@RequiredArgsConstructor
-public class IdempotencyService {
+---
 
-    private final RedisTemplate<String, Object> redisTemplate;
-    private final ObjectMapper mapper = new ObjectMapper();
-    private static final String PREFIX = "idem:";
+## 🔁 Idempotency & Retry Behavior
 
-    public void storeResponse(String key, PaymentResponse response, Duration ttl) {
-        redisTemplate.opsForValue().set(PREFIX + key,
-                mapper.writeValueAsString(response), ttl);
-    }
+If you retry the same request with the same Idempotency-Key, the API will respond:
 
-    public PaymentResponse getResponse(String key) {
-        Object json = redisTemplate.opsForValue().get(PREFIX + key);
-        if (json == null) return null;
-        try {
-            return mapper.readValue(json.toString(), PaymentResponse.class);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+```json
+{
+    "success": true,
+    "paymentId": "3",
+    "clientSecret": null,
+    "message": "Payment already exists for idempotency key"
 }
+```
 
-💼 Stripe Services
+This ensures duplicate payments are not processed.
 
-The service includes two flows:
+## 🗄️ Example Data Stored
 
-1️⃣ PaymentIntent Flow (createPayment)
+### Payment Table
 
-Suitable for custom card forms using Stripe.js
+| Payment ID | Amount | Date                       | Currency | Description                | Status                   | UUID                                 | Checkout URL                                      |
+|------------|--------|----------------------------|----------|----------------------------|--------------------------|--------------------------------------|---------------------------------------------------|
+| 1          | 60000  | 2025-10-14                 | usd      | Order #123 - Iphone 16     | requires_payment_method  | 3a67c3f4-39a2-4c02-b7b9-1D-intent    |                                                   |
+| 2          | 60000  | 2025-10-14                 | usd      | Order #123 - Iphone 16     | CHECKOUT_CREATED         | 3a67c3f4-39a2-4c02-b7b9-1D-checkout  | https://checkout.stripe.com/c/pay/cs_test_a1xxxxxx |
+| 2          | 60000  | 2025-10-14                 | usd      | Order #123 - Iphone 16     | PAYMENT_SUCCEEDED        | 3a67c3f4-39a2-4c02-b7b9-1D-checkout  |
 
-Returns clientSecret
+### Transaction Table
 
-Uses idempotency key with -intent suffix
+| Gateway         | Transaction ID         | Status                     | UUID                                PaymentID  | 
+|-----------------|-----------------------|---------                    |-----------------------------        |
+| STRIPE          | cs_test_a1xxxxx       | requires_payment_method     | cbabbdab-2c5b-4ec3-ab3e-33         |1
+| STRIPE_CHECKOUT | cs_test_a1xxxxx       | PENDING                     | 68a2d6e5-4050-4ac1-90f3-65          |2
+| STRIPE_CHECKOUT | cs_test_a1xxxxx       | SUCCEEDED                   | 68a2d6e5-4050-4ac1-90f3-65          |2
 
-2️⃣ Checkout Session Flow (createCheckoutSession)
+---
 
-Redirects user to Stripe Checkout
+---
 
-Stores the checkoutUrl
-
-Uses idempotency key with -checkout suffix
-
-🔐 Security (Basic Auth)
-@Bean
-public UserDetailsService userDetailsService() {
-    UserDetails admin = User.withUsername("admin")
-            .password("{noop}admin")
-            .roles("ADMIN")
-            .build();
-    return new InMemoryUserDetailsManager(admin);
-}
-
-@Bean
-public SecurityFilterChain security(HttpSecurity http) throws Exception {
-    http.csrf(csrf -> csrf.disable())
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/payment/**").hasRole("ADMIN")
-            .anyRequest().authenticated()
-        )
-        .httpBasic();
-    return http.build();
-}
-
-🧾 Controllers
-POST /api/payment/stripe/create
-
-Creates a Stripe PaymentIntent and returns the client secret.
-
-POST /api/payment/stripe/checkout
-
-Creates a Stripe Checkout Session and returns checkoutUrl to redirect the user.
-
-🌐 Webhook — Automatic Payment Confirmation
-
-Stripe sends events when:
-
-PaymentIntent succeeded
-
-PaymentIntent failed
-
-Checkout Session completed
-
-Webhook Endpoint
-@PostMapping("/webhook/stripe")
-public ResponseEntity<String> handleStripeWebhook(
-        @RequestBody String payload,
-        @RequestHeader("Stripe-Signature") String sigHeader) {
-
-    Event event;
-
-    try {
-        event = Webhook.constructEvent(
-                payload,
-                sigHeader,
-                webhookSecret
-        );
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().build();
-    }
-
-    switch (event.getType()) {
-
-        case "payment_intent.succeeded" -> {
-            PaymentIntent intent =
-                (PaymentIntent) event.getDataObjectDeserializer()
-                    .getObject().orElse(null);
-
-            if (intent != null) {
-                updatePaymentStatus(intent.getId(), "SUCCEEDED");
-            }
-        }
-
-        case "payment_intent.payment_failed" -> {
-            PaymentIntent intent =
-                (PaymentIntent) event.getDataObjectDeserializer()
-                    .getObject().orElse(null);
-            if (intent != null) {
-                updatePaymentStatus(intent.getId(), "FAILED");
-            }
-        }
-
-        case "checkout.session.completed" -> {
-            Session session =
-                (Session) event.getDataObjectDeserializer()
-                    .getObject().orElse(null);
-
-            if (session != null && session.getPaymentIntent() != null) {
-                updatePaymentStatus(session.getPaymentIntent(), "SUCCEEDED");
-            }
-        }
-    }
-
-    return ResponseEntity.ok("");
-}
-
-🔄 Payment + Transaction Auto-Update Logic
-private void updatePaymentStatus(String paymentIntentId, String newStatus) {
-
-    Transaction tx = transactionRepository
-            .findByGatewayTransactionId(paymentIntentId)
-            .orElse(null);
-
-    if (tx == null) {
-        System.out.println("No transaction found for PaymentIntent " + paymentIntentId);
-        return;
-    }
-
-    tx.setStatus("SUCCEEDED");
-    transactionRepository.save(tx);
-
-    Payment payment = tx.getPayment();
-    if (payment != null) {
-        payment.setStatus("PAYMENT_SUCCEEDED");
-        paymentRepository.save(payment);
-
-        System.out.println("Updated Payment id=" + payment.getId()
-                + " and Transaction id=" + tx.getId());
-    } else {
-        System.out.println("Transaction " + tx.getId()
-                + " has no associated Payment");
-    }
-}
-
-🧪 Running the Application
-Start Redis
-docker run -d -p 6379:6379 redis
-
-Run Spring Boot
-./gradlew bootRun
-
-💰 Payment Flows
-1️⃣ PaymentIntent (Custom Card Form)
-
-Client calls /stripe/create
-
-Backend creates PaymentIntent
-
-Returns clientSecret
-
-Frontend confirms payment using stripe.confirmCardPayment
-
-Webhook updates DB (Payment + Transaction)
-
-2️⃣ Checkout Session (Stripe Hosted)
-
-Client calls /stripe/checkout
-
-Backend returns checkoutUrl
-
-Frontend redirects user to Stripe
-
-User enters card details
-
-Stripe processes payment
-
-Webhook updates Payment + Transaction
+# 🎯 Summary
+- Supports PaymentIntent + Checkout flows  
+- Redis guarantees safe, duplicate-proof payments  
+- Database stores complete payment lifecycle  
+- Stripe Webhooks finalize payment status  
+- Secured using Spring Security  
+- Clean, scalable, production-ready payment architecture 
