@@ -35,7 +35,7 @@ Stripe sends events → backend updates Payment + Transaction status.
 - Database stores Payment + Transaction records  
 - Stripe Webhooks notify the backend of final payment status  
 
-Client App
+- Client App
 │
 ├── Calls /payment/create → PaymentIntent (clientSecret returned)
 │
