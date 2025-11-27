@@ -35,26 +35,6 @@ Stripe sends events → backend updates Payment + Transaction status.
 - Database stores Payment + Transaction records  
 - Stripe Webhooks notify the backend of final payment status  
 
-- Client App
-│
-├── Calls /payment/create → PaymentIntent (clientSecret returned)
-│
-├── Calls /payment/checkout → Stripe Checkout Session (URL returned)
-│
-Spring Boot Backend
-│
-├── Stripe SDK → Creates PaymentIntent / Checkout Session
-│
-├── Redis (idempotency keys)
-│ │
-│ └── Prevents duplicate payment creation
-│
-├── Database
-│ └── Stores Payment + Transaction records
-│
-└── Receives Stripe Webhooks
-│
-└── Updates payment status (SUCCEEDED / FAILED)
 
 ---
 
