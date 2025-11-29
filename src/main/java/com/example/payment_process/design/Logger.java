@@ -18,4 +18,7 @@ public class Logger {
     public void info(String message, String key) {
         System.out.println("[LOG]=====>" + message+ "[LOG]=====>"+key);
     }
+    public void msg(String message) {
+        System.out.println("[LOG]=====>" + message);
+    }
 }
