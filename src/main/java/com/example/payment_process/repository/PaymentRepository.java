@@ -11,4 +11,6 @@ import java.util.Optional;
 public interface PaymentRepository extends JpaRepository<Payment,Long> {
 
     Optional<Payment> findByUuid(String uuid);
+    Optional<Payment> findById(Long id);
+
 }
