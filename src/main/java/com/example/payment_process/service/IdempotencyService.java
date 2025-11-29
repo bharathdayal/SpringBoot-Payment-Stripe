@@ -37,4 +37,13 @@ public class IdempotencyService {
         }
     }
 
+    public void storeCheckoutUrl(String key, String checkoutUrl, Duration ttl) {
+        redisTemplate.opsForValue().set(PREFIX + key, checkoutUrl, ttl);
+    }
+
+    public String getCheckoutUrl(String key) {
+        Object val = redisTemplate.opsForValue().get(PREFIX + key);
+        return val != null ? val.toString() : null;
+    }
+
 }
