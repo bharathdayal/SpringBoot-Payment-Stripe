@@ -1,25 +1,58 @@
 // src/PaymentStatusPage.jsx
-import { useState } from "react";
-import { fetchPaymentStatus } from "./api";
+import { useState, useEffect } from "react";
+import { fetchPaymentStatus, fetchPaymentList } from "./api";
 import "./PaymentStatusPage.css";
 
 export default function PaymentStatusPage() {
   const [uuid, setUuid] = useState("");
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSearch = async () => {
-    if (!uuid.trim()) {
-      setError("Please enter a Payment UUID");
+  // For dropdown list
+  const [payments, setPayments] = useState([]);
+  const [loadingList, setLoadingList] = useState(false);
+  const [listError, setListError] = useState("");
+
+  // Load payments for dropdown on mount
+  useEffect(() => {
+    const loadPayments = async () => {
+      setLoadingList(true);
+      setListError("");
+      try {
+        const res = await fetchPaymentList();
+        setPayments(res || []);
+      } catch (e) {
+        console.error(e);
+        setListError("Failed to load payment list");
+      } finally {
+        setLoadingList(false);
+      }
+    };
+
+    loadPayments();
+  }, []);
+
+  // Helper to format amount + date
+  const formatAmount = (amount, currency) => {
+    if (amount == null) return "-";
+    return `${(amount / 100).toFixed(2)} ${currency ? currency.toUpperCase() : ""}`;
+  };
+
+  const formatDate = (iso) => (iso ? new Date(iso).toLocaleString() : "-");
+
+  const loadStatus = async (value) => {
+    const id = (value ?? uuid).trim();
+    if (!id) {
+      setError("Please enter or select a Payment UUID");
       return;
     }
     setError("");
-    setLoading(true);
+    setLoadingStatus(true);
     setData(null);
 
     try {
-      const res = await fetchPaymentStatus(uuid.trim());
+      const res = await fetchPaymentStatus(id);
       setData(res);
       if (!res.success) {
         setError(res.message || "Payment not found");
@@ -28,27 +61,38 @@ export default function PaymentStatusPage() {
       console.error(e);
       setError("Failed to fetch payment status");
     } finally {
-      setLoading(false);
+      setLoadingStatus(false);
+    }
+  };
+
+  const handleSearch = () => {
+    loadStatus();
+  };
+
+  const handleSelectChange = (e) => {
+    const value = e.target.value;
+    setUuid(value);
+    if (value) {
+      loadStatus(value);
     }
   };
 
   const statusBadgePayment = (status) => {
     if (!status) return <span className="ps-badge ps-badge-neutral">-</span>;
     const s = status.toUpperCase();
-     if (s === "CHECKOUT_CREATED" ) {
+    if (s === "CHECKOUT_CREATED") {
       return <span className="ps-badge ps-badge-success">Checkout Pending</span>;
     }
-    if ( s === "PAYMENT_SUCCEEDED") {
+    if (s === "PAYMENT_SUCCEEDED") {
       return <span className="ps-badge ps-badge-success">Succeeded</span>;
     }
-    
     return <span className="ps-badge ps-badge-warning">Pending</span>;
   };
 
   const statusBadgeTransaction = (status) => {
     if (!status) return <span className="ps-badge ps-badge-neutral">-</span>;
     const s = status.toUpperCase();
-    if (s === "SUCCEEDED" ) {
+    if (s === "SUCCEEDED") {
       return <span className="ps-badge ps-badge-success">Succeeded</span>;
     }
     if (s === "FAILED") {
@@ -64,23 +108,59 @@ export default function PaymentStatusPage() {
       <div className="ps-content">
         <header className="ps-header">
           <h1>Payment Status Dashboard</h1>
-          <p>Lookup a payment by UUID and see its status and latest transaction.</p>
+          <p>
+            Select a payment from the list or search by UUID to see its status and latest
+            transaction.
+          </p>
         </header>
 
-        {/* Search Card */}
+        {/* Search + Dropdown Card */}
         <section className="ps-card ps-search-card">
-          <label className="ps-label">Payment UUID</label>
-          <div className="ps-search-row">
-            <input
-              type="text"
-              value={uuid}
-              onChange={(e) => setUuid(e.target.value)}
-              placeholder="e.g. 3a67c3f4-39a2-4c02-b7b9-1L2-checkout"
-            />
-            <button onClick={handleSearch} disabled={loading}>
-              {loading ? "Checking..." : "Check Status"}
-            </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {/* Dropdown */}
+            <div>
+              <div className="ps-label">Select Payment (UUID)</div>
+              <select
+                value={uuid}
+                onChange={handleSelectChange}
+                className="ps-select"
+              >
+                <option value="">
+                  {loadingList
+                    ? "Loading payments..."
+                    : "Choose a payment from the list"}
+                </option>
+                {payments.map((p) => (
+                  <option key={p.uuid} value={p.uuid}>
+                    {formatAmount(p.amount, p.currency)} · {p.status} ·{" "}
+                    {formatDate(p.createdAt)} · {p.uuid}
+                  </option>
+                ))}
+              </select>
+              {listError && (
+                <div className="ps-alert ps-alert-error" style={{ marginTop: 6 }}>
+                  {listError}
+                </div>
+              )}
+            </div>
+
+            {/* Manual UUID search */}
+            <div>
+              <label className="ps-label">Search by UUID</label>
+              <div className="ps-search-row">
+                <input
+                  type="text"
+                  value={uuid}
+                  onChange={(e) => setUuid(e.target.value)}
+                  placeholder="e.g. 3a67c3f4-39a2-4c02-b7b9-1L2-checkout"
+                />
+                <button onClick={handleSearch} disabled={loadingStatus}>
+                  {loadingStatus ? "Checking..." : "Check Status"}
+                </button>
+              </div>
+            </div>
           </div>
+
           {error && <div className="ps-alert ps-alert-error">{error}</div>}
           {data && data.success && (
             <div className="ps-alert ps-alert-success">
@@ -99,17 +179,14 @@ export default function PaymentStatusPage() {
                   <h2>Payment Overview</h2>
                   <div className="ps-uuid">
                     UUID:{" "}
-                    <span className="ps-mono">
-                      {data.paymentUuid || "-"}
-                    </span>
+                    <span className="ps-mono">{data.paymentUuid || "-"}</span>
                   </div>
                 </div>
                 <div className="ps-amount-status">
                   {statusBadgePayment(data.status)}
                   {data.amount != null && (
                     <div className="ps-amount-pill">
-                      {(data.amount / 100).toFixed(2)}{" "}
-                      {data.currency?.toUpperCase() || ""}
+                      {formatAmount(data.amount, data.currency)}
                     </div>
                   )}
                 </div>
@@ -123,13 +200,7 @@ export default function PaymentStatusPage() {
                   </tr>
                   <tr>
                     <th>Amount</th>
-                    <td>
-                      {data.amount != null
-                        ? `${(data.amount / 100).toFixed(2)} ${
-                            data.currency?.toUpperCase() || ""
-                          }`
-                        : "-"}
-                    </td>
+                    <td>{formatAmount(data.amount, data.currency)}</td>
                   </tr>
                   <tr>
                     <th>Status</th>
@@ -174,7 +245,8 @@ export default function PaymentStatusPage() {
                     Most recent gateway transaction for this payment.
                   </p>
                 </div>
-                {data.lastTransactionStatus && statusBadgeTransaction(data.lastTransactionStatus)}
+                {data.lastTransactionStatus &&
+                  statusBadgeTransaction(data.lastTransactionStatus)}
               </div>
 
               {data.lastTransactionUuid ? (
@@ -182,9 +254,7 @@ export default function PaymentStatusPage() {
                   <tbody>
                     <tr>
                       <th>Transaction UUID</th>
-                      <td className="ps-mono">
-                        {data.lastTransactionUuid}
-                      </td>
+                      <td className="ps-mono">{data.lastTransactionUuid}</td>
                     </tr>
                     <tr>
                       <th>Status</th>
@@ -197,16 +267,14 @@ export default function PaymentStatusPage() {
                     <tr>
                       <th>Gateway Transaction ID</th>
                       <td className="ps-break ps-mono">
-                        {data.lastGatewayTransactionId || "-"}
+                        {data.lastTransactionTransactionId || data.lastGatewayTransactionId || "-"}
                       </td>
                     </tr>
                     <tr>
                       <th>Created At</th>
                       <td>
                         {data.lastTransactionCreatedAt
-                          ? new Date(
-                              data.lastTransactionCreatedAt
-                            ).toLocaleString()
+                          ? new Date(data.lastTransactionCreatedAt).toLocaleString()
                           : "-"}
                       </td>
                     </tr>
@@ -221,11 +289,10 @@ export default function PaymentStatusPage() {
           </div>
         )}
 
-        {!data && !loading && !error && (
+        {!data && !loadingStatus && !error && (
           <div className="ps-hint">
-            After creating a payment in your backend, copy its{" "}
-            <code>uuid</code> from the DB and paste it above to view the
-            status and transaction.
+            After creating a payment in your backend, select it from the dropdown or
+            paste its <code>uuid</code> above to view the status and transaction.
           </div>
         )}
       </div>
