@@ -38,11 +38,17 @@ public class SecurityConfig {
 
                 // Authorize requests
                 .authorizeHttpRequests(auth -> auth
-                        // Require authentication for this endpoint
+                        // 1) Allow Stripe webhook publicly (no auth)
+                        .requestMatchers("/api/payment/webhook/stripe").permitAll()
+                        .requestMatchers("/api/payment/status/**").permitAll()
+
+                        // 2) All other /api/payment/** still require auth
                         .requestMatchers("/api/payment/**").authenticated()
-                        // any other request requires authentication
+
+                        // 3) Any other request also requires auth
                         .anyRequest().authenticated()
                 )
+
 
                 // For demo only: use default form/login disabled
                 .httpBasic(Customizer.withDefaults());

@@ -10,6 +10,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
+
     @Bean
     public RedisTemplate<String,Object>redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String,Object>redisTemplate=new RedisTemplate<>();
