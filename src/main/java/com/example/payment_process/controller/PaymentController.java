@@ -2,8 +2,19 @@ package com.example.payment_process.controller;
 
 import com.example.payment_process.dto.OrderRequest;
 import com.example.payment_process.dto.PaymentResponse;
+import com.example.payment_process.model.Payment;
+import com.example.payment_process.model.Transaction;
+import com.example.payment_process.repository.PaymentRepository;
+import com.example.payment_process.repository.TransactionRepository;
 import com.example.payment_process.service.PaymentService;
+import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
+import com.stripe.model.Event;
+import com.stripe.model.EventDataObjectDeserializer;
+import com.stripe.model.StripeObject;
+import com.stripe.model.checkout.Session;
+import com.stripe.net.ApiResource;
+import com.stripe.net.Webhook;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -13,6 +24,8 @@ import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/payment")
@@ -20,8 +33,13 @@ public class PaymentController {
 
 
     private final PaymentService stripeService;
-    public PaymentController(@Qualifier("idempotentStripeService") PaymentService stripeService) {
+    private final PaymentRepository paymentRepository;
+    private final TransactionRepository transactionRepository;
+
+    public PaymentController(@Qualifier("idempotentStripeService") PaymentService stripeService, PaymentRepository paymentRepository, TransactionRepository transactionRepository) {
         this.stripeService = stripeService;
+        this.paymentRepository = paymentRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     @PostMapping("/create")
@@ -40,5 +58,23 @@ public class PaymentController {
         String checkoutUrl = stripeService.createCheckoutSession(orderRequest,idempotencyKey);
         return ResponseEntity.ok(Map.of("checkoutUrl", checkoutUrl,
                 "message", "Stripe Checkout session created successfully"));
+    }
+
+    @PostMapping("/webhook/stripe")
+    public ResponseEntity<String> handleStripeWebhook(
+            @RequestHeader("Stripe-Signature") String sigHeader,
+            @RequestBody String payload) {
+
+       
+        stripeService.handleWebhook(sigHeader,payload);
+
+
+        return ResponseEntity.ok("");
+    }
+
+    @GetMapping("/status/{paymentUuid}")
+    public ResponseEntity<PaymentResponse>getPaymentStatus(@PathVariable String paymentUuid) {
+        PaymentResponse response =stripeService.getPaymentStatus(paymentUuid);
+        return ResponseEntity.ok(response);
     }
 }
