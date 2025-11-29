@@ -7,15 +7,24 @@ import com.example.payment_process.model.Payment;
 import com.example.payment_process.model.Transaction;
 import com.example.payment_process.repository.PaymentRepository;
 import com.example.payment_process.repository.TransactionRepository;
+import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
+import com.stripe.model.Event;
+import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
+import com.stripe.net.ApiResource;
 import com.stripe.net.RequestOptions;
+import com.stripe.net.Webhook;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -32,6 +41,9 @@ public class StripeServiceImpl implements PaymentService {
 
     @Value("${stripe.api-key}")
     private String stripeApiKey;
+
+    @Value("${stripe.api-webhook-secret}")
+    private String stripeWebhookSecret;
 
 
     // ---------------------------
@@ -124,11 +136,15 @@ public class StripeServiceImpl implements PaymentService {
                     .message("Stripe error: " + e.getMessage())
                     .build();
         }
+
     }
     // -----------------------------
     // New Stripe Checkout flow
     // -----------------------------
     public String createCheckoutSession(OrderRequest orderRequest, String idempotencyKey)  {
+
+        // Set Stripe API key
+        com.stripe.Stripe.apiKey = stripeApiKey;
 
         // Prepare endpoint-specific key: avoids collisions with PaymentIntent keys
         String checkoutKey = (idempotencyKey != null && !idempotencyKey.isBlank())
@@ -213,6 +229,160 @@ public class StripeServiceImpl implements PaymentService {
         paymentRepository.save(payment);
 
         return session.getUrl();
+    }
+
+    @Override
+    public String handleWebhook(String sigHeader, String payload) {
+        Event event;
+        try {
+            event = Webhook.constructEvent(
+                    payload,
+                    sigHeader,
+                    stripeWebhookSecret
+            );
+        } catch (SignatureVerificationException e) {
+            throw new RuntimeException(e);
+        }
+
+        String eventType = event.getType();
+        log.msg("Stripe event type = " + eventType);
+
+        if ("checkout.session.completed".equals(eventType)) {
+            handleCheckoutSessionCompleted(event);
+        }
+        return "OK";
+    }
+
+
+
+    private void handleCheckoutSessionCompleted(Event event) {
+
+        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+        Session session = null;
+
+        // 1) Try normal deserialization
+        if (deserializer.getObject().isPresent()) {
+            StripeObject stripeObject = deserializer.getObject().get();
+            if (stripeObject instanceof Session) {
+                session = (Session) stripeObject;
+            } else {
+                log.msg("Expected Session, but got " +
+                        stripeObject.getClass().getName());
+            }
+        } else {
+            // 2) Fallback: parse raw JSON as Session
+            String rawJson = deserializer.getRawJson();
+            log.msg("Using raw JSON fallback: " + rawJson);
+            session = ApiResource.GSON.fromJson(rawJson, Session.class);
+        }
+
+        if (session == null) {
+            log.msg("Could not deserialize Session for event " + event.getId());
+            return; // nothing to update, but controller will still return 200
+        }
+
+        String sessionId = session.getId();
+        log.msg("checkout.session.completed for sessionId = " + sessionId);
+
+        // 3) Load existing Transaction from DB
+        Optional<Transaction> txOpt =
+                transactionRepository.findByGatewayTransactionId(sessionId);
+
+        if (txOpt.isEmpty()) {
+            log.msg("No Transaction found for gatewayTransactionId = " + sessionId);
+            return;
+        }
+
+        Transaction tx = txOpt.get();
+
+        // 4) Update transaction status
+        tx.setStatus("SUCCEEDED");
+        transactionRepository.save(tx);
+
+        // 5) Update linked Payment
+        Payment payment = tx.getPayment();
+        if (payment != null) {
+            payment.setStatus("PAYMENT_SUCCEEDED");
+            paymentRepository.save(payment);
+            log.msg("Updated Payment id=" + payment.getId()
+                    + " and Transaction id=" + tx.getId());
+        } else {
+            log.msg("Transaction " + tx.getId() +
+                    " has no associated Payment. Check mapping.");
+        }
+    }
+
+    @Override
+    public PaymentResponse getPaymentStatus(String paymentUuid) {
+        return paymentRepository.findByUuid(paymentUuid)
+                .map(payment -> {
+
+                    // get latest transaction for this payment (if any)
+                    var transactions =
+                            transactionRepository.findByPaymentOrderByCreatedAtDesc(payment);
+
+                    Transaction latestTx = transactions.isEmpty() ? null : transactions.get(0);
+
+                    return PaymentResponse.builder()
+                            .success(true)
+                            .message("Payment status fetched successfully")
+                            .paymentUuid(payment.getUuid())
+                            .amount(payment.getAmount())
+                            .currency(payment.getCurrency())
+                            .productDesc(payment.getDescription())
+                            .status(payment.getStatus())
+                            .lastTransactionUuid(latestTx != null ? latestTx.getUuid() : null)
+                            .lastTransactionStatus(latestTx != null ? latestTx.getStatus() : null)
+                            .lastGateway(latestTx != null ? latestTx.getGateway() : null)
+                            .lastGatewayTransactionId(
+                                    latestTx != null ? latestTx.getGatewayTransactionId() : null
+                            )
+                            .lastTransactionCreatedAt(
+                                    latestTx != null ? latestTx.getCreatedAt() : null
+                            )
+                            .build();
+                })
+                .orElseGet(() -> PaymentResponse.builder()
+                        .success(false)
+                        .message("No payment found for uuid=" + paymentUuid)
+                        .paymentUuid(paymentUuid)
+                        .build());
+    }
+
+    @Override
+    public PaymentResponse getPaymentStatus(Long orderId) {
+        return paymentRepository.findById(orderId)
+                .map(payment -> {
+
+                    // get latest transaction for this payment (if any)
+                    var transactions =
+                            transactionRepository.findByPaymentOrderByCreatedAtDesc(payment);
+
+                    Transaction latestTx = transactions.isEmpty() ? null : transactions.get(0);
+
+                    return PaymentResponse.builder()
+                            .success(true)
+                            .message("Payment status fetched successfully")
+                            .paymentUuid(payment.getUuid())
+                            .amount(payment.getAmount())
+                            .currency(payment.getCurrency())
+                            .productDesc(payment.getDescription())
+                            .status(payment.getStatus())
+                            .lastTransactionUuid(latestTx != null ? latestTx.getUuid() : null)
+                            .lastTransactionStatus(latestTx != null ? latestTx.getStatus() : null)
+                            .lastGateway(latestTx != null ? latestTx.getGateway() : null)
+                            .lastGatewayTransactionId(
+                                    latestTx != null ? latestTx.getGatewayTransactionId() : null
+                            )
+                            .lastTransactionCreatedAt(
+                                    latestTx != null ? latestTx.getCreatedAt() : null
+                            )
+                            .build();
+                })
+                .orElseGet(() -> PaymentResponse.builder()
+                        .success(false)
+                        .message("No payment found for orderId=" + orderId)
+                        .build());
     }
 
 }
