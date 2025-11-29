@@ -1,0 +1,272 @@
+/* Full-page wrapper with gradient background */
+.ps-page-wrapper {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #f9fafb;
+}
+
+.ps-gradient-bg {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at top left, #4f46e5 0, transparent 55%),
+              radial-gradient(circle at bottom right, #06b6d4 0, transparent 55%),
+              linear-gradient(135deg, #020617, #020617 50%, #020617);
+  opacity: 0.95;
+  z-index: -1;
+}
+
+.ps-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+}
+
+/* Header */
+.ps-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.ps-header p {
+  font-size: 13px;
+  color: #cbd5f5;
+}
+
+/* Cards */
+.ps-card {
+  background: rgba(15, 23, 42, 0.88);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.9);
+  padding: 18px 20px 20px;
+  backdrop-filter: blur(18px);
+}
+
+.ps-search-card {
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+
+.ps-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #e5e7eb;
+  margin-bottom: 6px;
+}
+
+/* Search row */
+.ps-search-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ps-search-row input {
+  flex: 1;
+  min-width: 220px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #4b5563;
+  background-color: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  font-size: 13px;
+}
+
+.ps-search-row input::placeholder {
+  color: #6b7280;
+}
+
+.ps-search-row input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+
+.ps-search-row button {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ps-search-row button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+/* Alerts */
+.ps-alert {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.ps-alert-error {
+  background-color: rgba(248, 113, 113, 0.16);
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  color: #fecaca;
+}
+
+.ps-alert-success {
+  background-color: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.6);
+  color: #a7f3d0;
+}
+
+/* Grid layout for the two cards */
+.ps-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .ps-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Card headers */
+.ps-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.ps-card-header h2 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.ps-subtitle {
+  font-size: 11px;
+  margin: 2px 0 0;
+  color: #9ca3af;
+}
+
+.ps-uuid {
+  font-size: 11px;
+  margin-top: 4px;
+  color: #9ca3af;
+}
+
+.ps-mono {
+  font-family: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+}
+
+/* Amount + badge area */
+.ps-amount-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.ps-amount-pill {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+/* Tables */
+.ps-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ps-table th,
+.ps-table td {
+  padding: 7px 4px;
+  vertical-align: top;
+}
+
+.ps-table th {
+  width: 140px;
+  text-align: left;
+  color: #9ca3af;
+  font-weight: 500;
+  padding-right: 12px;
+}
+
+.ps-table tr + tr th,
+.ps-table tr + tr td {
+  border-top: 1px solid rgba(55, 65, 81, 0.6);
+}
+
+/* Badges */
+.ps-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ps-badge-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.7);
+}
+
+.ps-badge-error {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.7);
+}
+
+.ps-badge-warning {
+  background-color: rgba(251, 191, 36, 0.15);
+  color: #fde68a;
+  border: 1px solid rgba(251, 191, 36, 0.7);
+}
+
+.ps-badge-neutral {
+  background-color: rgba(148, 163, 184, 0.18);
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+}
+
+/* Misc */
+.ps-empty {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.ps-break {
+  word-break: break-all;
+}
+
+.ps-hint {
+  margin-top: 16px;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.ps-hint code {
+  background: rgba(15, 23, 42, 0.9);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 11px;
+}
