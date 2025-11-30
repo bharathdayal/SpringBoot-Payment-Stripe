@@ -36,3 +36,134 @@
     transform: rotate(360deg);
   }
 }
+
+/* HEADER */
+.app-header {
+  background: #0f172a; /* dark navy */
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Container */
+.nav-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Project Title */
+.app-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f1f5f9;
+  letter-spacing: 0.3px;
+}
+
+/* Navigation Links */
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-item {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+
+  transition: background 0.25s, color 0.25s;
+}
+
+/* Hover Style */
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+/* Active Tab */
+.nav-item.active,
+.nav-item.active:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+/* Ensure NavLink applies the active class correctly */
+.nav-item.active {
+  font-weight: 600;
+}
+
+/* BODY */
+.app-body {
+  padding: 24px;
+}
+
+/* Header background */
+.header {
+  background: #0f172a;
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Center content */
+.header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 18px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Title & subtitle */
+.project-title {
+  color: #f8fafc;
+  font-size: 20px;
+  margin: 0;
+  font-weight: 700;
+}
+
+.project-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Navigation */
+.nav {
+  display: flex;
+  gap: 22px;
+}
+
+/* Tab style */
+.nav-item {
+  text-decoration: none;
+  color: #cbd5e1;
+  font-size: 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: 0.2s ease;
+}
+
+/* Hover */
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+/* Active tab */
+.nav-active {
+  background: #3b82f6;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+/* Body padding */
+.main-body {
+  padding: 30px;
+}
