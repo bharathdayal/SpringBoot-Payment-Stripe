@@ -1,0 +1,144 @@
+.succ-page-wrapper {
+  min-height: 100vh;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #f9fafb;
+}
+
+.succ-gradient-bg {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at top left, #22c55e 0, transparent 55%),
+              radial-gradient(circle at bottom right, #06b6d4 0, transparent 55%),
+              linear-gradient(135deg, #020617, #020617 50%, #020617);
+  opacity: 0.95;
+  z-index: -1;
+}
+
+.succ-content {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 48px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.succ-card {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.9);
+  padding: 28px 24px 24px;
+  text-align: center;
+  backdrop-filter: blur(20px);
+}
+
+.succ-icon-circle {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.succ-icon {
+  font-size: 30px;
+  color: #4ade80;
+}
+
+.succ-card h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 8px 0 4px;
+}
+
+.succ-subtitle {
+  font-size: 13px;
+  color: #cbd5f5;
+  margin-bottom: 20px;
+}
+
+.succ-info {
+  margin: 0 auto 20px;
+  max-width: 280px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.succ-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+}
+
+.succ-value {
+  font-size: 13px;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.succ-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 480px) {
+  .succ-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+.succ-btn-primary,
+.succ-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+}
+
+.succ-btn-primary {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #022c22;
+}
+
+.succ-btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.succ-btn-secondary {
+  background: rgba(15, 23, 42, 0.95);
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+}
+
+.succ-btn-secondary:hover {
+  background: rgba(15, 23, 42, 0.98);
+}
+
+.succ-hint {
+  font-size: 11px;
+  color: #9ca3af;
+}
