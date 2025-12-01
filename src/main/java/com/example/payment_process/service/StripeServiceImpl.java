@@ -3,6 +3,7 @@ package com.example.payment_process.service;
 import com.example.payment_process.design.Logger;
 import com.example.payment_process.dto.OrderRequest;
 import com.example.payment_process.dto.PaymentResponse;
+import com.example.payment_process.dto.PaymentSummary;
 import com.example.payment_process.model.Payment;
 import com.example.payment_process.model.Transaction;
 import com.example.payment_process.repository.PaymentRepository;
@@ -23,10 +24,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -141,7 +144,7 @@ public class StripeServiceImpl implements PaymentService {
     // -----------------------------
     // New Stripe Checkout flow
     // -----------------------------
-    public String createCheckoutSession(OrderRequest orderRequest, String idempotencyKey)  {
+    public String createCheckoutSession(OrderRequest orderRequest, String idempotencyKey,String baseUrl)  {
 
         // Set Stripe API key
         com.stripe.Stripe.apiKey = stripeApiKey;
@@ -197,8 +200,8 @@ public class StripeServiceImpl implements PaymentService {
 
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl("http://localhost:8086/success?paymentId=" + payment.getId())
-                .setCancelUrl("http://localhost:8086/cancel")
+                .setSuccessUrl(baseUrl + "/success?paymentId=" + payment.getId())
+                .setCancelUrl(baseUrl + "/cancel")
                 .addLineItem(lineItem)
                 .build();
 
@@ -247,7 +250,7 @@ public class StripeServiceImpl implements PaymentService {
         String eventType = event.getType();
         log.msg("Stripe event type = " + eventType);
 
-        if ("checkout.session.completed".equals(eventType)) {
+        if ("checkout.session.completed".equals(eventType) || "payment_intent.succeeded".equals(eventType)) {
             handleCheckoutSessionCompleted(event);
         }
         return "OK";
@@ -383,6 +386,21 @@ public class StripeServiceImpl implements PaymentService {
                         .success(false)
                         .message("No payment found for orderId=" + orderId)
                         .build());
+    }
+
+    @Override
+    public List<PaymentSummary> listAllPayments() {
+        return paymentRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                .stream()
+                .map(p -> PaymentSummary.builder()
+                        .uuid(p.getUuid())
+                        .amount(p.getAmount())
+                        .currency(p.getCurrency())
+                        .status(p.getStatus())
+                        .createdAt(p.getCreatedAt())
+                        .description(p.getDescription())
+                        .build())
+                .toList();
     }
 
 }
