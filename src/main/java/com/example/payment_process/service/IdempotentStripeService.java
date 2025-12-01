@@ -3,6 +3,7 @@ package com.example.payment_process.service;
 import com.example.payment_process.design.Logger;
 import com.example.payment_process.dto.OrderRequest;
 import com.example.payment_process.dto.PaymentResponse;
+import com.example.payment_process.dto.PaymentSummary;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.net.Webhook;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.List;
 
 @Service("idempotentStripeService")
 @RequiredArgsConstructor
@@ -50,12 +52,12 @@ public class IdempotentStripeService implements PaymentService{
     }
 
     @Override
-    public String createCheckoutSession(OrderRequest request, String idempotencyKey) {
+    public String createCheckoutSession(OrderRequest request, String idempotencyKey,String baseUrl) {
 
         // If no idempotency key, just delegate directly
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             log.info("No idempotency key {} provided for checkout delegating directly to StripeService",idempotencyKey);
-            return stripeService.createCheckoutSession(request, null);
+            return stripeService.createCheckoutSession(request, null,"");
         }
 
         // Use a separate logical key for checkout so it doesn't clash with PaymentIntent
@@ -63,6 +65,7 @@ public class IdempotentStripeService implements PaymentService{
 
         // 1) Check Redis first
         String cachedUrl = idempotencyService.getCheckoutUrl(checkoutKey);
+
         if (cachedUrl != null) {
             log.info("Checkout idempotency key {} found in Redis, returning cached checkout URL", checkoutKey);
             return cachedUrl;
@@ -71,7 +74,7 @@ public class IdempotentStripeService implements PaymentService{
         log.info("Checkout idempotency key {} not found, calling StripeService.createCheckoutSession", checkoutKey);
 
         // 2) Call actual Stripe checkout flow
-        String checkoutUrl = stripeService.createCheckoutSession(request, idempotencyKey);
+        String checkoutUrl = stripeService.createCheckoutSession(request, idempotencyKey,baseUrl);
 
         // 3) Store in Redis
         log.info("Storing checkout URL in Redis for key {}", checkoutKey);
@@ -115,6 +118,11 @@ public class IdempotentStripeService implements PaymentService{
             return null;
         }
         return stripeService.getPaymentStatus(orderId);
+    }
+
+    @Override
+    public List<PaymentSummary> listAllPayments() {
+        return stripeService.listAllPayments();
     }
 
 
