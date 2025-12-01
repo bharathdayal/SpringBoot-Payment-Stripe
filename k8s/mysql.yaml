@@ -7,11 +7,11 @@ type: Opaque
 data:
   # echo -n "rootpassword" | base64
   mysql-root-password: 
-  # echo -n "payments" | base64   (db name)
+  # echo -n "database" | base64
   mysql-database: 
-  # echo -n "paymentsuser" | base64
+  # echo -n "user" | base64
   mysql-user: 
-  # echo -n "paymentspwd" | base64
+  # echo -n "pwd" | base64
   mysql-password: 
 ---
 apiVersion: v1
@@ -73,4 +73,5 @@ spec:
         resources:
           requests:
             storage: 5Gi
+
 
