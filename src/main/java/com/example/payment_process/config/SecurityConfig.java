@@ -41,6 +41,7 @@ public class SecurityConfig {
                         // 1) Allow Stripe webhook publicly (no auth)
                         .requestMatchers("/api/payment/webhook/stripe").permitAll()
                         .requestMatchers("/api/payment/status/**").permitAll()
+                        .requestMatchers("/api/payment/list/**").permitAll()
 
                         // 2) All other /api/payment/** still require auth
                         .requestMatchers("/api/payment/**").authenticated()
@@ -59,3 +60,4 @@ public class SecurityConfig {
         return http.build();
     }
 }
+
