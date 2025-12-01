@@ -1,4 +1,5 @@
-const BASE_URL = "http://localhost:8086/api/payment";
+//const BASE_URL = "http://localhost:8086/api/payment";
+const BASE_URL = "/api/payment";
 
 export async function fetchPaymentStatus(paymentUuid) {
   const res = await fetch(`${BASE_URL}/status/${paymentUuid}`);
