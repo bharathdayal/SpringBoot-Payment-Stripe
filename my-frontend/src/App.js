@@ -11,7 +11,7 @@ import CheckoutPage from "./CheckoutPage";
 import "./App.css"; // header styles
 
 const stripePromise = loadStripe(
-  "pk_test_555xxxxxxxxxxxxxxxxxxxx"
+  "pk_test_xxxxxxxxx"
 );
 
 export default function App() {
